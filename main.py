@@ -4,7 +4,7 @@
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QTextEdit, QLabel, QPushButton, QListWidget,
-    QFrame, QLineEdit, QFormLayout
+    QFrame, QLineEdit, QFormLayout, QTableWidget, QTableWidgetItem
 )
 from PySide6.QtCore import Qt, QPropertyAnimation, QPoint
 import sys
@@ -13,6 +13,8 @@ import matplotlib
 matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt import NavigationToolbar2QT
+
 
 import os, importlib
 
@@ -133,45 +135,80 @@ class MainWindow(QMainWindow):
 
 
     def build_input_form(self):
+        self.clear_layout(self.input_layout)
         if self.current_tool is None:
             return
-        if self.current_tool.parameters() is None:
+        if not hasattr(self.current_tool, "input_table"):
             return
 
-        while self.input_layout.count():
-            item = self.input_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
+        columns = self.current_tool.input_table()
 
-        self.param_inputs.clear()
+        # ---- Create table ----
+        self.table = QTableWidget(3, len(columns))
+        self.table.setHorizontalHeaderLabels(columns)
+        self.table.verticalHeader().setVisible(False)
+        self.table.setMinimumHeight(120)
 
-        for name, default in self.current_tool.parameters().items():
-            field = QLineEdit(str(default))
-            self.param_inputs[name] = field
-            self.input_layout.addRow(f"{name}:", field)
+        self.input_layout.addRow(self.table)
 
-        run_button = QPushButton("Run")
-        run_button.clicked.connect(self.run_current_tool)
-        self.input_layout.addRow(run_button)
+        # ---- Buttons ----
 
+        run_btn = QPushButton("Run")
+        run_btn.clicked.connect(self.run_current_tool)
+
+        btn_row = QWidget()
+        btn_layout = QHBoxLayout(btn_row)
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+
+        if not self.current_tool.fixed_rows():
+            add_row_btn = QPushButton("+ Add row")
+            add_row_btn.clicked.connect(self.add_row)
+            btn_layout.addWidget(add_row_btn)
+        if not self.current_tool.fixed_columns():
+            add_column_btn = QPushButton("+ Add column")
+            add_column_btn.clicked.connect(self.add_column)
+            btn_layout.addWidget(add_column_btn)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(run_btn)
+
+        self.input_layout.addRow(btn_row)
+
+    # ----------------- Output -----------------
     def run_current_tool(self):
         if self.current_tool is None:
             return
-        
-        try:
-            params = {
-                name: float(field.text())
-                for name, field in self.param_inputs.items()
-            }
-        except ValueError:
-            self.show_text_output("Invalid input")
+
+        rows = []
+
+        for r in range(self.table.rowCount()):
+            row_data = {}
+            has_data = False
+
+            for c in range(self.table.columnCount()):
+                header = self.table.horizontalHeaderItem(c).text()
+                item = self.table.item(r, c)
+
+                if item is not None and item.text().strip():
+                    try:
+                        row_data[header] = float(item.text())
+                        has_data = True
+                    except ValueError:
+                        self.show_text(f"Invalid number at row {r+1}")
+                        return
+
+            if has_data:
+                rows.append(row_data)
+
+        if not rows:
+            self.show_text("No particles entered")
             return
+        print(rows)
+        widget = self.current_tool.run(rows)
+        self.clear_output()
+        self.output_layout.addWidget(widget)
 
-        result = self.current_tool.run(params)
-        self.show_plot(result)
 
-    # -------- Output helpers --------
     def clear_output(self):
         while self.output_layout.count():
             item = self.output_layout.takeAt(0)
@@ -179,20 +216,25 @@ class MainWindow(QMainWindow):
             if widget is not None:
                 widget.deleteLater()
     
-    def show_plot(self, data):
+    def clear_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def add_row(self):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+    
+    def add_column(self):
+        column = self.table.columnCount()
+        self.table.insertColumn(column)
+
+    def show_text(self, text):
         self.clear_output()
-        x, y = data
-
-        fig = Figure()
-        canvas = FigureCanvasQTAgg(fig)
-        ax = fig.add_subplot(111)
-        ax.plot(x, y)
-
-        self.output_layout.addWidget(canvas)
-
-    def show_text_output(self, text):
-        self.clear_output()
-        self.output_layout.addWidget(QTextEdit(text))
+        widget = QLabel(text)
+        self.output_layout.addWidget(widget)
 
 
 # ---------------- Entry Point ----------------
