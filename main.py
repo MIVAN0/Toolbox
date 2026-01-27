@@ -156,6 +156,9 @@ class MainWindow(QMainWindow):
         run_btn = QPushButton("Run")
         run_btn.clicked.connect(self.run_current_tool)
 
+        help_btn = QPushButton("Help")
+        help_btn.clicked.connect(self.display_help)
+
         btn_row = QWidget()
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
@@ -170,6 +173,7 @@ class MainWindow(QMainWindow):
             btn_layout.addWidget(add_column_btn)
         
         btn_layout.addStretch()
+        btn_layout.addWidget(help_btn)
         btn_layout.addWidget(run_btn)
 
         self.input_layout.addRow(btn_row)
@@ -178,15 +182,15 @@ class MainWindow(QMainWindow):
     def run_current_tool(self):
         if self.current_tool is None:
             return
-
-        rows = []
+        
+        table_data = []
 
         for r in range(self.table.rowCount()):
             row_data = {}
             has_data = False
 
             for c in range(self.table.columnCount()):
-                header = self.table.horizontalHeaderItem(c).text()
+                header = self.table.horizontalHeaderItem(c).text() # type: ignore
                 item = self.table.item(r, c)
 
                 if item is not None and item.text().strip():
@@ -198,16 +202,21 @@ class MainWindow(QMainWindow):
                         return
 
             if has_data:
-                rows.append(row_data)
+                table_data.append(row_data)
 
-        if not rows:
-            self.show_text("No particles entered")
+        if not table_data:
+            self.show_text("No input entered")
             return
-        print(rows)
-        widget = self.current_tool.run(rows)
+        
+        widget = self.current_tool.run(table_data)
         self.clear_output()
         self.output_layout.addWidget(widget)
 
+    def display_help(self):
+        if self.current_tool is None:
+            return
+        text = self.current_tool.help()
+        self.show_text(text)
 
     def clear_output(self):
         while self.output_layout.count():
@@ -233,7 +242,9 @@ class MainWindow(QMainWindow):
 
     def show_text(self, text):
         self.clear_output()
-        widget = QLabel(text)
+        widget = QTextEdit()
+        widget.setReadOnly(True)
+        widget.setText(text)
         self.output_layout.addWidget(widget)
 
 
