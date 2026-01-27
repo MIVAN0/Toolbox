@@ -1,5 +1,4 @@
-import numpy as np
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QHBoxLayout
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt import NavigationToolbar2QT
@@ -18,6 +17,12 @@ class Tool:
     
     def fixed_columns(self):
         return True
+
+    def help(self):
+        text = """Inputs:
+    coordinates (x,y) in meters,
+    charge (q) in coulombs, e notation is valid (1.602*10^-19 = 1.602e-19)"""
+        return text
 
     def run(self, params):
         particles = params
@@ -44,13 +49,30 @@ class Tool:
 
         ax.set_aspect("equal")
         ax.grid(True)
-
+        
+        # Creating plot widget
         canvas = FigureCanvasQTAgg(fig)
         toolbar = NavigationToolbar2QT(canvas)
 
+        plot_widget = QWidget()
+        plot_layout = QVBoxLayout(plot_widget)
+        plot_layout.setContentsMargins(0, 0, 0, 0)
+        plot_layout.addWidget(toolbar)
+        plot_layout.addWidget(canvas)
+
+        # Creating text widget
+        text = QTextEdit()
+        text.setReadOnly(True)
+        
+        lines = []
+        for i, p in enumerate(particles):
+            lines.append(f"Q{i+1}: ({p["x"]}, {p["y"]}), E={Ex[i]:.6e}i + {Ey[i]:.6e}j")
+        text.setText("\n".join(lines))
+
+        # Setting plot and text side by side
         widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.addWidget(toolbar)
-        layout.addWidget(canvas)
+        layout = QHBoxLayout(widget)
+        layout.addWidget(plot_widget, 3)
+        layout.addWidget(text, 1)
 
         return widget

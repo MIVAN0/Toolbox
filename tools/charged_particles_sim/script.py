@@ -1,4 +1,3 @@
-import numpy as np
 from math import sqrt
 
 epsilon0 = 8.854187817e-12
