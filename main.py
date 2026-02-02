@@ -1,20 +1,10 @@
-# =============================
-# main.py  (GUI ONLY)
-# =============================
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QTextEdit, QLabel, QPushButton, QListWidget,
-    QFrame, QLineEdit, QFormLayout, QTableWidget, QTableWidgetItem
+    QFrame, QFormLayout, QTableWidget
 )
-from PySide6.QtCore import Qt, QPropertyAnimation, QPoint
+from PySide6.QtCore import Qt, QPoint
 import sys
-
-import matplotlib
-matplotlib.use("QtAgg")
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt import NavigationToolbar2QT
-
 
 import os, importlib
 
@@ -135,16 +125,16 @@ class MainWindow(QMainWindow):
 
 
     def build_input_form(self):
+        self.table = None
         self.clear_layout(self.input_layout)
         if self.current_tool is None:
             return
-        if not hasattr(self.current_tool, "input_table"):
-            return
+        input_form = self.current_tool.input_form()
 
-        columns = self.current_tool.input_table()
+        columns = input_form.get("input_table")
 
         # ---- Create table ----
-        self.table = QTableWidget(3, len(columns))
+        self.table = QTableWidget(input_form.get("default_rows", 1), len(columns))
         self.table.setHorizontalHeaderLabels(columns)
         self.table.verticalHeader().setVisible(False)
         self.table.setMinimumHeight(120)
@@ -163,11 +153,11 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
 
-        if not self.current_tool.fixed_rows():
+        if not input_form.get("fixed_rows", False):
             add_row_btn = QPushButton("+ Add row")
             add_row_btn.clicked.connect(self.add_row)
             btn_layout.addWidget(add_row_btn)
-        if not self.current_tool.fixed_columns():
+        if not input_form.get("fixed_columns", False):
             add_column_btn = QPushButton("+ Add column")
             add_column_btn.clicked.connect(self.add_column)
             btn_layout.addWidget(add_column_btn)
@@ -180,26 +170,30 @@ class MainWindow(QMainWindow):
 
     # ----------------- Output -----------------
     def run_current_tool(self):
-        if self.current_tool is None:
-            return
+        for part in [self.current_tool, self.table]:
+            if part is None:
+                return
         
         table_data = []
 
-        for r in range(self.table.rowCount()):
+        for r in range(self.table.rowCount()): # type: ignore
             row_data = {}
             has_data = False
 
-            for c in range(self.table.columnCount()):
+            for c in range(self.table.columnCount()): # type: ignore
                 header = self.table.horizontalHeaderItem(c).text() # type: ignore
-                item = self.table.item(r, c)
+                item = self.table.item(r, c) # type: ignore
 
                 if item is not None and item.text().strip():
                     try:
                         row_data[header] = float(item.text())
                         has_data = True
                     except ValueError:
-                        self.show_text(f"Invalid number at row {r+1}")
+                        self.show_text(f"Invalid number at  r: {r+1}, c: {c+1}")
                         return
+                else:
+                    self.show_text(f"Invalid number at row r: {r+1}, c: {c+1}")
+                    return
 
             if has_data:
                 table_data.append(row_data)
@@ -208,7 +202,7 @@ class MainWindow(QMainWindow):
             self.show_text("No input entered")
             return
         
-        widget = self.current_tool.run(table_data)
+        widget = self.current_tool.run(table_data) # type: ignore
         self.clear_output()
         self.output_layout.addWidget(widget)
 
@@ -233,12 +227,12 @@ class MainWindow(QMainWindow):
                 widget.deleteLater()
 
     def add_row(self):
-        row = self.table.rowCount()
-        self.table.insertRow(row)
+        row = self.table.rowCount() # type: ignore
+        self.table.insertRow(row) # type: ignore
     
     def add_column(self):
-        column = self.table.columnCount()
-        self.table.insertColumn(column)
+        column = self.table.columnCount() # type: ignore
+        self.table.insertColumn(column) # type: ignore
 
     def show_text(self, text):
         self.clear_output()
