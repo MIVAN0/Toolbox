@@ -7,16 +7,14 @@ from .script import compute_fields
 
 
 class Tool:
-    name = "Charged Particles (Static Forces)"
+    name = "Charged Particles"
 
-    def input_table(self):
-        return ["x", "y", "q"]
-
-    def fixed_rows(self):
-        return False
-    
-    def fixed_columns(self):
-        return True
+    def input_form(self):
+        return {
+            "input_table": ["x", "y", "q"],
+            "fixed_columns": True,
+            "default_rows": 2
+        }
 
     def help(self):
         text = """Inputs:
@@ -66,7 +64,7 @@ class Tool:
         
         lines = []
         for i, p in enumerate(particles):
-            lines.append(f"Q{i+1}: ({p["x"]}, {p["y"]}), E={Ex[i]:.6e}i + {Ey[i]:.6e}j")
+            lines.append(f"Q{i+1}: ({p['x']}, {p['y']}), E={Ex[i]:.6e}i + {Ey[i]:.6e}j")
         text.setText("\n".join(lines))
 
         # Setting plot and text side by side
