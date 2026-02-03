@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QTextEdit, QLabel, QPushButton, QListWidget,
-    QFrame, QFormLayout, QTableWidget
+    QFrame, QFormLayout, QTableWidget, QTableWidgetItem
 )
 from PySide6.QtCore import Qt, QPoint
 import sys
@@ -153,14 +153,20 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
 
-        if not input_form.get("fixed_rows", False):
-            add_row_btn = QPushButton("+ Add row")
-            add_row_btn.clicked.connect(self.add_row)
-            btn_layout.addWidget(add_row_btn)
-        if not input_form.get("fixed_columns", False):
-            add_column_btn = QPushButton("+ Add column")
-            add_column_btn.clicked.connect(self.add_column)
-            btn_layout.addWidget(add_column_btn)
+        if input_form.get("fixed_column_row_ratio", False):
+            add_cr_btn = QPushButton("+ Add column and row")
+            add_cr_btn.clicked.connect(self.add_row)
+            add_cr_btn.clicked.connect(self.add_column)
+            btn_layout.addWidget(add_cr_btn)
+        else:
+            if not input_form.get("fixed_rows", False):
+                add_row_btn = QPushButton("+ Add row")
+                add_row_btn.clicked.connect(self.add_row)
+                btn_layout.addWidget(add_row_btn)
+            if not input_form.get("fixed_columns", False):
+                add_column_btn = QPushButton("+ Add column")
+                add_column_btn.clicked.connect(self.add_column)
+                btn_layout.addWidget(add_column_btn)
         
         btn_layout.addStretch()
         btn_layout.addWidget(help_btn)
@@ -233,6 +239,7 @@ class MainWindow(QMainWindow):
     def add_column(self):
         column = self.table.columnCount() # type: ignore
         self.table.insertColumn(column) # type: ignore
+        self.table.setHorizontalHeaderItem(column, QTableWidgetItem(str(column+1))) # type: ignore
 
     def show_text(self, text):
         self.clear_output()
